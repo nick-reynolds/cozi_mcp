@@ -47,13 +47,14 @@ def get_keep():
         os.chmod(KEEP_TOKEN_FILE, 0o600)
         logger.info("Saved master token to file")
 
-    keep.resume(GOOGLE_EMAIL, token)
+    keep.authenticate(GOOGLE_EMAIL, token)
     return keep
 
 
 async def main():
     keep = get_keep()
     keep.sync()
+
 
     shopping_list = next(
         (n for n in keep.all()
@@ -87,14 +88,17 @@ async def main():
     from cozi_mcp.server import get_cozi_client
     client = await get_cozi_client(COZI_USERNAME, COZI_PASSWORD)
 
-    for item in new_items:
-        text = item.text.strip()
-        try:
-            await client.add_item(GROCERIES_LIST_ID, text)
-            item.checked = True
-            logger.info("Synced: %s", text)
-        except Exception as e:
-            logger.error("Failed to add '%s': %s", text, e)
+    try:
+        for item in new_items:
+            text = item.text.strip()
+            try:
+                await client.add_item(GROCERIES_LIST_ID, text)
+                item.checked = True
+                logger.info("Synced: %s", text)
+            except Exception as e:
+                logger.error("Failed to add '%s': %s", text, e)
+    finally:
+        await client.close()
 
     keep.sync()
 
